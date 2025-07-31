@@ -11,57 +11,200 @@ import tkinter.messagebox as messagebox
 
 # ======================= 公共API接口 =======================
 def get_default_k_r_path():
+    """
+    获取Krita默认资源路径
+    Get the default Krita resources path
+
+    :return: Krita默认资源路径字符串 | Default Krita resources path string
+    :rtype: str
+    """
     return _get_default_k_r_path()
 
+
 def get_app_icon():
+    """
+    获取应用程序图标路径
+    Get the application icon path
+
+    :return: 应用程序图标文件路径 | Application icon file path
+    :rtype: str
+    """
     return _get_app_icon()
 
+
 def apply_theme_to_titlebar(master):
+    """
+    应用主题到窗口标题栏（Windows平台专用）
+    Apply theme to window titlebar (Windows platform specific)
+
+    :param master: Tkinter主窗口对象 | Tkinter main window object
+    """
     _apply_theme_to_titlebar(master)
 
+
 def set_krita_is_on_callback(callback):
+    """
+    设置Krita启动时的回调函数
+    Set callback function when Krita starts
+
+    :param callback: 回调函数 | Callback function
+    """
     _set_krita_is_on_callback(callback)
 
+
 def set_krita_is_off_callback(callback):
+    """
+    设置Krita关闭时的回调函数
+    Set callback function when Krita stops
+
+    :param callback: 回调函数 | Callback function
+    """
     _set_krita_is_off_callback(callback)
 
+
 def set_krita_is_unk_callback(callback):
+    """
+    设置Krita状态未知时的回调函数
+    Set callback function when Krita status is unknown
+
+    :param callback: 回调函数 | Callback function
+    """
     _set_krita_is_unk_callback(callback)
 
+
 def check_krita():
+    """
+    检查Krita是否正在运行
+    Check if Krita is running
+
+    :return: True表示正在运行, False表示未运行, None表示检查失败
+             True if running, False if not, None if check failed
+    :rtype: bool or None
+    """
     return _check_krita()
 
+
 def update_krita_status():
+    """
+    启动后台线程持续更新Krita状态，在状态更改时调用回调
+    Start background thread to continuously update Krita status, call callback when state changes
+    """
     _update_krita_status()
 
+
 def new_krita_config(name):
+    """
+    创建新的Krita配置
+    Create a new Krita configuration
+
+    :param name: 配置名称 | Configuration name
+    :return: (是否成功, 错误信息) | (Success status, Error message)
+    :rtype: (bool, str or None)
+    """
     return _new_krita_config(name)
 
+
 def get_config_path(name):
+    """
+    获取配置自身的存储路径和内部记录的资源路径
+    Obtain the storage path for configuring itself and the resource path for internal records
+
+    :param name: 配置名称 | Configuration name
+    :return: (存储路径, 资源路径) | (Storage path, Resources path)
+    :rtype: (str, str)
+    """
     return _get_config_path(name)
 
+
 def check_configuration_path(name):
+    """
+    检查配置中的资源路径与目前程序设置的路径是否相同
+    Check if the resource path in the configuration is the same as the path currently set in the program
+
+    :param name: 配置名称 | Configuration name
+    :return: 路径是否有效 | Whether the path is valid
+    :rtype: bool
+    """
     return _check_configuration_path(name)
 
+
 def reset_krita():
+    """
+    重置Krita配置到初始状态
+    Reset Krita configuration to initial state
+
+    :return: 是否成功 | Whether succeeded
+    :rtype: bool
+    """
     return _reset_krita()
 
+
 def use_krita_config(name):
+    """
+    应用指定的Krita配置
+    Apply specified Krita configuration
+
+    :param name: 配置名称 | Configuration name
+    :return: 是否成功 | Whether succeeded
+    :rtype: bool
+    """
     return _use_krita_config(name)
 
+
 def del_krita_config(name):
+    """
+    删除指定的Krita配置
+    Delete specified Krita configuration
+
+    :param name: 配置名称 | Configuration name
+    :return: 是否成功 | Whether succeeded
+    :rtype: bool
+    """
     return _del_krita_config(name)
 
+
 def output_krita_config(name, path):
+    """
+    导出Krita配置到ZIP文件
+    Export Krita configuration to ZIP file
+
+    :param name: 配置名称 | Configuration name
+    :param path: 导出文件路径 | Export file path
+    """
     _output_krita_config(name, path)
 
+
 def extract_krita_config(path):
+    """
+    从ZIP文件提取Krita配置
+    Extract Krita configuration from ZIP file
+
+    :param path: ZIP文件路径 | ZIP file path
+    :return: (资源路径, 平台, 名称, 临时路径) | (Resources path, Platform, Name, Temp path)
+    :rtype: (str, str, str, str)
+    """
     return _extract_krita_config(path)
 
+
 def input_krita_config(path, new_name=None):
+    """
+    导入Krita配置
+    Import Krita configuration
+
+    :param path: 配置文件路径 | Configuration file path
+    :param new_name: 可选的新名称 | Optional new name
+    """
     _input_krita_config(path, new_name)
 
+
 def get_platform_name():
+    """
+    获取当前平台名称
+    Get current platform name
+
+    :return: 平台名称 (如'windows') | Platform name (e.g. 'windows')
+    :rtype: str
+    """
     return _get_platform_name()
 
 # ======================= 私有实现方法 =======================
