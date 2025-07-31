@@ -5,32 +5,81 @@ import sv_ttk
 import subprocess
 import threading
 import os
-import zipfile
-
-from PyInstaller import HOMEPATH
-
 import json_manage
 import shutil
 import tkinter.messagebox as messagebox
 
-
-"""windows平台依赖的部分代码"""
-
-krita_local_appdata_path = [os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'krita.log'),
-                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritacrash.log'),
-                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritadisplayrc'),
-                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritarc'),
-                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritashortcutsrc'),
-                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'krita-sysinfo.log'),]
-
+# ======================= 公共API接口 =======================
 def get_default_k_r_path():
+    return _get_default_k_r_path()
+
+def get_app_icon():
+    return _get_app_icon()
+
+def apply_theme_to_titlebar(master):
+    _apply_theme_to_titlebar(master)
+
+def set_krita_is_on_callback(callback):
+    _set_krita_is_on_callback(callback)
+
+def set_krita_is_off_callback(callback):
+    _set_krita_is_off_callback(callback)
+
+def set_krita_is_unk_callback(callback):
+    _set_krita_is_unk_callback(callback)
+
+def check_krita():
+    return _check_krita()
+
+def update_krita_status():
+    _update_krita_status()
+
+def new_krita_config(name):
+    return _new_krita_config(name)
+
+def get_config_path(name):
+    return _get_config_path(name)
+
+def check_configuration_path(name):
+    return _check_configuration_path(name)
+
+def reset_krita():
+    return _reset_krita()
+
+def use_krita_config(name):
+    return _use_krita_config(name)
+
+def del_krita_config(name):
+    return _del_krita_config(name)
+
+def output_krita_config(name, path):
+    _output_krita_config(name, path)
+
+def extract_krita_config(path):
+    return _extract_krita_config(path)
+
+def input_krita_config(path, new_name=None):
+    _input_krita_config(path, new_name)
+
+def get_platform_name():
+    return _get_platform_name()
+
+# ======================= 私有实现方法 =======================
+_krita_local_appdata_path = [os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'), 'krita.log'),
+                             os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritacrash.log'),
+                             os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritadisplayrc'),
+                             os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritarc'),
+                             os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritashortcutsrc'),
+                             os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'krita-sysinfo.log'), ]
+
+def _get_default_k_r_path():
     default_k_r_path = os.path.join(os.getenv('APPDATA'), 'krita')
     return default_k_r_path
 
-def get_app_icon():
+def _get_app_icon():
     return os.path.join(os.getcwd(), 'resources', 'app-icon.ico')
 
-def apply_theme_to_titlebar(master):
+def _apply_theme_to_titlebar(master):
     """应用主题到Windows标题栏"""
     version = sys.getwindowsversion()
 
@@ -50,19 +99,19 @@ _krita_is_on_callback = None
 _krita_is_off_callback = None
 _krita_is_unk_callback = None
 
-def set_krita_is_on_callback(callback):
+def _set_krita_is_on_callback(callback):
     global _krita_is_on_callback
     _krita_is_on_callback = callback
 
-def set_krita_is_off_callback(callback):
+def _set_krita_is_off_callback(callback):
     global _krita_is_off_callback
     _krita_is_off_callback = callback
 
-def set_krita_is_unk_callback(callback):
+def _set_krita_is_unk_callback(callback):
     global _krita_is_unk_callback
     _krita_is_unk_callback = callback
 
-def check_krita():
+def _check_krita():
     try:
         # 检查krita.exe进程
         output = subprocess.check_output(
@@ -77,7 +126,7 @@ def check_krita():
         # noinspection PyTypeChecker
         return None
 
-def update_krita_status():
+def _update_krita_status():
     """后台更新Krita状态"""
     # noinspection PyBroadExceptio
     def _check():
@@ -88,7 +137,7 @@ def update_krita_status():
         global _krita_is_unk_callback
 
         while True:
-            is_running = check_krita()
+            is_running = _check_krita()
             if is_running is False and _last_krita_status != is_running:
                 _last_krita_status = is_running
                 if _krita_is_off_callback:
@@ -114,7 +163,7 @@ def _make_no_username_path(path: str):
 def _add_username_path(path: str):
     return path.replace('{$USERDIR}',os.path.join(os.getenv('SYSTEMDRIVE'),os.getenv('HOMEPATH')))
 
-def new_krita_config(name):
+def _new_krita_config(name):
 
     path = os.path.join('.', 'config', name)
     src_path = json_manage.settings_manager.get_setting('krita_resources_path').replace('/', '\\')
@@ -124,12 +173,12 @@ def new_krita_config(name):
         shutil.copytree(src_path, os.path.join(path, 'resources'))
         os.makedirs(os.path.join(path, 'config'))
 
-        for i in krita_local_appdata_path:
+        for i in _krita_local_appdata_path:
             try:
                 shutil.copyfile(i, os.path.join(path, 'config', os.path.basename(i)))
             except FileNotFoundError:
                 pass
-        json_manage.config_manager.new_config(name, src_path_no_username, get_platform_name())
+        json_manage.config_manager.new_config(name, src_path_no_username, _get_platform_name())
         return True, None
     except Exception as e:
         messagebox.showerror(title=json_manage.language_manager.get_static().get('error'), message=str(e))
@@ -144,20 +193,20 @@ def _get_path(name):
     sre_path = json_manage.config_manager.get_config(name).get('resources_path')
     return [path, sre_path]
 
-def get_config_path(name):
+def _get_config_path(name):
     path, sre_path = _get_path(name)
     return path, _add_username_path(sre_path)
 
-def check_configuration_path(name):
-    path = get_config_path(name)
+def _check_configuration_path(name):
+    path = _get_config_path(name)
     if path[1] != json_manage.settings_manager.get_setting('krita_resources_path'):
         return False
     return True
 
-def reset_krita():
+def _reset_krita():
     try:
         shutil.rmtree(json_manage.settings_manager.get_setting('krita_resources_path'))
-        for i in krita_local_appdata_path:
+        for i in _krita_local_appdata_path:
             try:
                 os.remove(i)
             except FileNotFoundError:
@@ -175,14 +224,14 @@ def reset_krita():
     return True
 
 
-def use_krita_config(name):
+def _use_krita_config(name):
     path, sre_path = _get_path(name)
     sre_path = _add_username_path(sre_path)
 
     try:
-        reset_krita()
+        _reset_krita()
         try:
-            shutil.rmtree(get_config_path(name)[1])
+            shutil.rmtree(_get_config_path(name)[1])
         except FileNotFoundError:
             pass
 
@@ -193,7 +242,7 @@ def use_krita_config(name):
             return False
 
 
-        for i in krita_local_appdata_path:
+        for i in _krita_local_appdata_path:
             try:
                 shutil.copyfile(os.path.join(path, 'config', os.path.basename(i)), i)
             except FileNotFoundError:
@@ -212,7 +261,7 @@ def use_krita_config(name):
         json_manage.settings_manager.set_setting('krita_resources_path', sre_path)
     return True
 
-def del_krita_config(name):
+def _del_krita_config(name):
     path = _get_path(name)[0]
     try:
         shutil.rmtree(path)
@@ -222,16 +271,16 @@ def del_krita_config(name):
         messagebox.showerror(title=json_manage.language_manager.get_static().get('error'), message=str(e))
         return False
 
-def output_krita_config(name, path):
+def _output_krita_config(name, path):
     out_path = path.replace('/', '\\')
-    path = get_config_path(name)[0]
+    path = _get_config_path(name)[0]
     temp_file_path = os.path.join(os.getcwd(),'temp', name)
     shutil.copytree(path, temp_file_path)
     json_manage.config_manager.output_one_config(name, temp_file_path)
     shutil.make_archive(out_path.replace('.zip', ''), 'zip', temp_file_path)
     shutil.rmtree(temp_file_path)
 
-def extract_krita_config(path):
+def _extract_krita_config(path):
     temp_file_path = os.path.join(os.getcwd(), 'temp', str(os.path.basename(path).replace('.zip', '')))
     shutil.unpack_archive(path, temp_file_path)
     try:
@@ -241,13 +290,10 @@ def extract_krita_config(path):
     except Exception as e:
         messagebox.showerror(title=json_manage.language_manager.get_static().get('error'),message=str(e))
 
-def input_krita_config(path, new_name=None):
+def _input_krita_config(path, new_name=None):
     json_manage.config_manager.input_one_config(os.path.join(path, 'configs.json'), new_name)
     shutil.copytree(os.path.join(path, 'resources'), os.path.join(os.getcwd(),'config', new_name, 'resources'))
     shutil.copytree(os.path.join(path, 'config'), os.path.join(os.getcwd(),'config', new_name, 'config'))
 
-
-
-
-def get_platform_name():
+def _get_platform_name():
     return 'windows'
