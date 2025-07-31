@@ -1,0 +1,253 @@
+import json
+import sys
+import pywinstyles
+import sv_ttk
+import subprocess
+import threading
+import os
+import zipfile
+
+from PyInstaller import HOMEPATH
+
+import json_manage
+import shutil
+import tkinter.messagebox as messagebox
+
+
+"""windows平台依赖的部分代码"""
+
+krita_local_appdata_path = [os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'krita.log'),
+                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritacrash.log'),
+                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritadisplayrc'),
+                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritarc'),
+                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritashortcutsrc'),
+                            os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'krita-sysinfo.log'),]
+
+def get_default_k_r_path():
+    default_k_r_path = os.path.join(os.getenv('APPDATA'), 'krita')
+    return default_k_r_path
+
+def get_app_icon():
+    return os.path.join(os.getcwd(), 'resources', 'app-icon.ico')
+
+def apply_theme_to_titlebar(master):
+    """应用主题到Windows标题栏"""
+    version = sys.getwindowsversion()
+
+    # Windows 11特定处理
+    if version.major == 10 and version.build >= 22000:
+        # 根据当前主题设置标题栏颜色
+        pywinstyles.change_header_color(master, "#1c1c1c" if sv_ttk.get_theme() == "dark" else "#fafafa")
+        # 通过透明度微调强制刷新标题栏
+        master.wm_attributes("-alpha", 0.99)
+        master.wm_attributes("-alpha", 1)
+    # Windows 10处理
+    elif version.major == 10:
+        pywinstyles.apply_style(master, "dark" if sv_ttk.get_theme() == "dark" else "normal")
+
+_last_krita_status = None
+_krita_is_on_callback = None
+_krita_is_off_callback = None
+_krita_is_unk_callback = None
+
+def set_krita_is_on_callback(callback):
+    global _krita_is_on_callback
+    _krita_is_on_callback = callback
+
+def set_krita_is_off_callback(callback):
+    global _krita_is_off_callback
+    _krita_is_off_callback = callback
+
+def set_krita_is_unk_callback(callback):
+    global _krita_is_unk_callback
+    _krita_is_unk_callback = callback
+
+def check_krita():
+    try:
+        # 检查krita.exe进程
+        output = subprocess.check_output(
+            ['tasklist', '/FI', 'IMAGENAME eq krita.exe'],
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
+        is_run = b"krita.exe" in output
+
+        return is_run
+    except:
+        # 出错时保持灰色状态
+        # noinspection PyTypeChecker
+        return None
+
+def update_krita_status():
+    """后台更新Krita状态"""
+    # noinspection PyBroadExceptio
+    def _check():
+
+        global _last_krita_status
+        global _krita_is_on_callback
+        global _krita_is_off_callback
+        global _krita_is_unk_callback
+
+        while True:
+            is_running = check_krita()
+            if is_running is False and _last_krita_status != is_running:
+                _last_krita_status = is_running
+                if _krita_is_off_callback:
+                    _krita_is_off_callback()
+
+            elif is_running is True and _last_krita_status != is_running:
+                _last_krita_status = is_running
+                if _krita_is_on_callback:
+                    _krita_is_on_callback()
+
+            elif is_running is None and _last_krita_status != is_running:
+                if _krita_is_unk_callback:
+                    _krita_is_unk_callback()
+
+            threading.Event().wait(0.5)
+
+            # 启动后台线程
+    threading.Thread(target=_check, daemon=True).start()
+
+def _make_no_username_path(path: str):
+    return path.replace(os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('HOMEPATH')), '{$USERDIR}')
+
+def _add_username_path(path: str):
+    return path.replace('{$USERDIR}',os.path.join(os.getenv('SYSTEMDRIVE'),os.getenv('HOMEPATH')))
+
+def new_krita_config(name):
+
+    path = os.path.join('.', 'config', name)
+    src_path = json_manage.settings_manager.get_setting('krita_resources_path').replace('/', '\\')
+    src_path_no_username = _make_no_username_path(src_path)
+
+    try:
+        shutil.copytree(src_path, os.path.join(path, 'resources'))
+        os.makedirs(os.path.join(path, 'config'))
+
+        for i in krita_local_appdata_path:
+            try:
+                shutil.copyfile(i, os.path.join(path, 'config', os.path.basename(i)))
+            except FileNotFoundError:
+                pass
+        json_manage.config_manager.new_config(name, src_path_no_username, get_platform_name())
+        return True, None
+    except Exception as e:
+        messagebox.showerror(title=json_manage.language_manager.get_static().get('error'), message=str(e))
+        try:
+            shutil.rmtree(path)
+        except FileNotFoundError:
+            pass
+        return False, str(e)
+
+def _get_path(name):
+    path = os.path.join(os.getcwd(), 'config', name)
+    sre_path = json_manage.config_manager.get_config(name).get('resources_path')
+    return [path, sre_path]
+
+def get_config_path(name):
+    path, sre_path = _get_path(name)
+    return path, _add_username_path(sre_path)
+
+def check_configuration_path(name):
+    path = get_config_path(name)
+    if path[1] != json_manage.settings_manager.get_setting('krita_resources_path'):
+        return False
+    return True
+
+def reset_krita():
+    try:
+        shutil.rmtree(json_manage.settings_manager.get_setting('krita_resources_path'))
+        for i in krita_local_appdata_path:
+            try:
+                os.remove(i)
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                messagebox.showerror(title=json_manage.language_manager.get_static().get('error'), message=str(e))
+                return False
+    except FileNotFoundError:
+        return True
+
+    except Exception as e:
+        messagebox.showerror(title=json_manage.language_manager.get_static().get('error'),message=str(e))
+        return False
+
+    return True
+
+
+def use_krita_config(name):
+    path, sre_path = _get_path(name)
+    sre_path = _add_username_path(sre_path)
+
+    try:
+        reset_krita()
+        try:
+            shutil.rmtree(get_config_path(name)[1])
+        except FileNotFoundError:
+            pass
+
+        try:
+            shutil.copytree(os.path.join(path, 'resources'), sre_path)
+        except Exception as e:
+            messagebox.showerror(title=json_manage.language_manager.get_static().get('error'), message=str(e))
+            return False
+
+
+        for i in krita_local_appdata_path:
+            try:
+                shutil.copyfile(os.path.join(path, 'config', os.path.basename(i)), i)
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                messagebox.showerror(title=json_manage.language_manager.get_static().get('error'), message=str(e))
+                return False
+
+    except FileNotFoundError:
+        pass
+
+    except Exception as e:
+        messagebox.showerror(title=json_manage.language_manager.get_static().get('error'),message=str(e))
+        return False
+    if json_manage.settings_manager.get_setting('krita_resources_path') != sre_path:
+        json_manage.settings_manager.set_setting('krita_resources_path', sre_path)
+    return True
+
+def del_krita_config(name):
+    path = _get_path(name)[0]
+    try:
+        shutil.rmtree(path)
+        json_manage.config_manager.remove_config(name)
+        return True
+    except Exception as e:
+        messagebox.showerror(title=json_manage.language_manager.get_static().get('error'), message=str(e))
+        return False
+
+def output_krita_config(name, path):
+    out_path = path.replace('/', '\\')
+    path = get_config_path(name)[0]
+    temp_file_path = os.path.join(os.getcwd(),'temp', name)
+    shutil.copytree(path, temp_file_path)
+    json_manage.config_manager.output_one_config(name, temp_file_path)
+    shutil.make_archive(out_path.replace('.zip', ''), 'zip', temp_file_path)
+    shutil.rmtree(temp_file_path)
+
+def extract_krita_config(path):
+    temp_file_path = os.path.join(os.getcwd(), 'temp', str(os.path.basename(path).replace('.zip', '')))
+    shutil.unpack_archive(path, temp_file_path)
+    try:
+        with open(os.path.join(temp_file_path, 'configs.json'), 'r', encoding='utf-8') as f:
+            configs = json.load(f)
+            return _add_username_path(configs.get('resources_path')), configs.get('platform'), configs.get('name'), temp_file_path
+    except Exception as e:
+        messagebox.showerror(title=json_manage.language_manager.get_static().get('error'),message=str(e))
+
+def input_krita_config(path, new_name=None):
+    json_manage.config_manager.input_one_config(os.path.join(path, 'configs.json'), new_name)
+    shutil.copytree(os.path.join(path, 'resources'), os.path.join(os.getcwd(),'config', new_name, 'resources'))
+    shutil.copytree(os.path.join(path, 'config'), os.path.join(os.getcwd(),'config', new_name, 'config'))
+
+
+
+
+def get_platform_name():
+    return 'windows'
