@@ -32,7 +32,7 @@
     "static": {
         "about-title": "About",
         "about-label-l": "Version: {$version}\nAuthor: {$developer}",
-        "about-label-r": "Chinese language file provided by: White Bear Fx\n(Other language providers visible after switching languages)",
+        "about-label-r": "English language file provided by: 白熊Fx（White Bear Fx）\n(Other language providers visible after switching languages)",
         "title": "Krita Configuration Manager",
         "clear": "Reset/Clear Configuration",
         "error": "Error",
