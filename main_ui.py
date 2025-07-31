@@ -743,47 +743,114 @@ class ToolBar(ttk.Frame):
 
     def apply_configuration(self):
         """应用配置验证逻辑"""
-        # 检查Krita是否正在运行
-        # noinspection PyBroadException
-        is_run = platform_dependence.check_krita()
-        if is_run:
+        # 检查Krita运行状态
+        krita_status = platform_dependence.check_krita()
+
+        # 处理Krita运行状态
+        if krita_status is True:
             self.show_error(json_manage.language_manager.get_static().get('error-krita-is-on'))
             return
-        if is_run is None:
-            # 如果检查失败，尝试应用配置
+        elif krita_status is None:
             self.show_error(json_manage.language_manager.get_static().get('error-krita-is-unk'))
+            # 检查失败时仍尝试继续应用配置
 
-        if self.check_selected_items():
-            # 只有一个配置被选中，执行应用逻辑
-            selected_configs = self.config_list.get_selected_configs()
-            if list(selected_configs.keys())[0] == 0:
-                config = list(selected_configs.values())[0]
-                self._use(config, True)
-            else:
-                config = list(selected_configs.values())[0]
+        # 验证是否有选中的配置项
+        if not self.check_selected_items():
+            return
 
-                # 清除任何现有的错误消息
-                self.clear_error()
+        # 获取选中的配置
+        selected_configs = self.config_list.get_selected_configs()
+        config_key = next(iter(selected_configs.keys()))
+        config = next(iter(selected_configs.values()))
 
-                if not platform_dependence.check_configuration_path(config.name):
-                    ask_window = AskWindow(self.winfo_toplevel(),
-                                           text=json_manage.language_manager.get_static().get('path_disagreement')
-                                           .replace('{$PATH}', platform_dependence.get_config_path(config.name)[1]))
-                    ask_window.set_ok_callback(lambda :self._use(config))
-                    ask_window.set_cancel_callback(ask_window.destroy)
-                    return
+        # 处理默认配置（key=0）
+        if config_key == 0:
+            self._apply_default_config(config)
+        # 处理非默认配置
+        else:
+            self._apply_custom_config(config)
+
+    def _create_ask_window(self, text, ok_callback, cancel_callback=None):
+        """创建并配置询问窗口"""
+        ask_window = AskWindow(self.winfo_toplevel(), text=text)
+
+        # 设置取消回调（默认为销毁窗口）
+        if cancel_callback:
+            ask_window.set_cancel_callback(cancel_callback)
+        else:
+            ask_window.set_cancel_callback(ask_window.destroy)
+
+        # 设置确定回调（自动添加窗口销毁）
+        def wrapped_ok_callback():
+            ok_callback()
+            ask_window.destroy()
+
+        ask_window.set_ok_callback(wrapped_ok_callback)
+        return ask_window
+
+    def _apply_default_config(self, config):
+        """应用默认配置（key=0）"""
+        text = (json_manage.language_manager.get_static().get('apply-tips')
+                .replace('{$NAME}', config.name)
+                .replace('{$PATH}', json_manage.settings_manager.get_setting('krita_resources_path')))
+
+        if json_manage.settings_manager.get_setting('del-dont-ask'):
+            self._use(config, reset=True)
+        else:
+            def ok_callback():
+                self._use(config, reset=True)
+
+            self._create_ask_window(text, ok_callback)
+
+    def _apply_custom_config(self, config):
+        """应用自定义配置（key≠0）"""
+        self.clear_error()
+
+        if not platform_dependence.check_configuration_path(config.name):
+            self._handle_path_mismatch(config)
+        else:
+            self._handle_path_match(config)
+
+    def _handle_path_mismatch(self, config):
+        """处理路径不一致的情况"""
+        text = (json_manage.language_manager.get_static().get('path_disagreement')
+                .replace('{$PATH}', platform_dependence.get_config_path(config.name)[1])
+                .replace('{$CONFIPATH}', json_manage.settings_manager.get_setting('krita_resources_path')))
+
+        if json_manage.settings_manager.get_setting('del-dont-ask'):
+            self._use(config)
+        else:
+            def ok_callback():
                 self._use(config)
+
+            self._create_ask_window(text, ok_callback)
+
+    def _handle_path_match(self, config):
+        """处理路径匹配的情况"""
+        text = (json_manage.language_manager.get_static().get('apply-tips')
+                .replace('{$NAME}', config.name)
+                .replace('{$PATH}', json_manage.settings_manager.get_setting('krita_resources_path')))
+
+        if json_manage.settings_manager.get_setting('del-dont-ask'):
+            self._use(config)
+        else:
+            def ok_callback():
+                self._use(config)
+
+            self._create_ask_window(text, ok_callback)
 
     def _use(self, config, reset=False):
         if reset:
             is_use = platform_dependence.reset_krita()
+            if is_use:
+                self.show_success(
+                    json_manage.language_manager.get_static().get('apply-done').replace('{$name}', config.name))
+
         else:
             is_use = platform_dependence.use_krita_config(config.name)
-        if is_use:
-            self.show_success(json_manage.language_manager.get_static().get('apply-done').replace('{$name}', config.name))
-
-        # 这里添加实际的应用配置逻辑
-        # print(f"正在应用配置: {config.name}")
+            if is_use:
+                self.show_success(
+                    json_manage.language_manager.get_static().get('apply-done').replace('{$name}', config.name))
 
     def show_error(self, message: str):
         """显示错误提示消息，5秒后消失"""
@@ -1012,8 +1079,19 @@ class SettingWindow(tk.Toplevel):
                                   textvariable=language_var_dic.get('krita-resource-path-tips'))
         self.k_r_tips.grid(column=1, row=4, padx=PAD_X, pady=PAD_Y, sticky='we', columnspan=4)
 
+        self.del_tips_label = ttk.Label(self.frame, textvariable=language_var_dic.get('del-tips'))
+        self.del_tips_label.grid(column=0, row=5, padx=PAD_X, pady=PAD_Y, sticky='w')
+
+        self.del_var = tk.BooleanVar(value=json_manage.settings_manager.get_setting('del-dont-ask'))
+
+        self.del_tip_cbt = ttk.Checkbutton(self.frame, textvariable=language_var_dic.get('del-tips-cbt'),
+                                           style='Switch.TCheckbutton',
+                                           variable=self.del_var,
+                                           command=self.del_tip_cbt_on_click)
+        self.del_tip_cbt.grid(column=1, row=5, padx=PAD_X, pady=PAD_Y, sticky='w')
+
         self.about_frame = ttk.LabelFrame(self.frame, text=json_manage.language_manager.get_static().get('about-title'))
-        self.about_frame.grid(column=0, row=5, padx=PAD_X, pady=PAD_Y, columnspan=5, sticky='nsew')
+        self.about_frame.grid(column=0, row=6, padx=PAD_X, pady=PAD_Y, columnspan=5, sticky='nsew')
 
         self.about_label_l = ttk.Label(self.about_frame, text=json_manage.language_manager.get_static().get('about-label-l')
                                      .replace('{$version}', version)
@@ -1045,6 +1123,9 @@ class SettingWindow(tk.Toplevel):
 
         platform_dependence.apply_theme_to_titlebar(self)
 
+    def del_tip_cbt_on_click(self):
+        json_manage.settings_manager.set_setting('del-dont-ask', self.del_var.get())
+
     def set_style(self, style_var, root):
         set_style(style_var.get())
         platform_dependence.apply_theme_to_titlebar(self)
@@ -1063,7 +1144,7 @@ class SettingWindow(tk.Toplevel):
         )
 
         if dir_path:  # 确保用户没有取消选择
-            self.k_r_var.set(dir_path)  # 设置变量会自动触发保存
+            self.k_r_var.set(platform_dependence.delimiter_conversion(dir_path))  # 设置变量会自动触发保存
 
     def _auto_save_path(self, *args):
         """当路径变量变化时自动保存到配置文件"""
@@ -1093,7 +1174,7 @@ class AskWindow(tk.Toplevel):
 
         self.resizable(False, False)
 
-        self.label = ttk.Label(self, wraplength=200, width=30, anchor='center')
+        self.label = ttk.Label(self, wraplength=500, anchor='center')
 
         if text:
             self.label.configure(text=text)

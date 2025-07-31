@@ -87,7 +87,8 @@ class SettingsManager(JsonManage):
             'krita_resources_path':platform_dependence.get_default_k_r_path(),
             'use_default_path': True,
             'default_path': platform_dependence.get_default_k_r_path(),
-            'first_begin': True
+            'first_begin': True,
+            'del-dont-ask': False
         }
 
         # 设置默认配置和路径
@@ -121,6 +122,8 @@ class LangManager(JsonManage):
             },
             'data': {
                 'setting': '设置',
+                'del-tips': '应用配置前询问: ',
+                'del-tips-cbt':'不再显示',
                 'output':'导出',
                 'on-output':'正在导出',
                 'input':'导入',
@@ -161,11 +164,13 @@ class LangManager(JsonManage):
                 'error-select-conflict':'该操作只能选择一个配置组！',
                 'title-new':'新建配置',
                 'apply-done':'正在应用配置: \'{$name}\'',
+                'apply-tips':'您确定要应用\'{$NAME}\'吗？\n\n如下目录将会被删除！\n{$PATH}\n\n您可以在设置中关闭此提醒',
                 'title-setting':'设置',
                 'error-krita-is-unk':'无法确定krita是否运行，正在尝试应用配置',
                 'platform_unk':'您使用的平台尚未支持',
                 'path_disagreement':'该配置组的配置目录设置与当前的应用设置不同，您确定要应用吗？'
-                                    '\n\n点击确定后程序的配置位置选项将被修改成\n\n{$PATH}',
+                                    '\n\n点击确定后程序的配置位置选项将被修改成\n{$PATH}\n\n'
+                                    '如下目录将被删除！\n{$PATH}\n{$CONFIPATH}\n\n您可以在设置中关闭此提醒',
                 'input-name_disagreement':'该配置组命名\'{$name}\'，与已有配置组重复，请重命名',
                 'error-platform-conflict':'无法导入：该配置组\'{$name}\'，来自\'{#config-platform}\'平台，'
                                           '与您使用的\'{#platform}\'不同，暂时不支持转换'

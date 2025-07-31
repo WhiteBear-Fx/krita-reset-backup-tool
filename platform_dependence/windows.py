@@ -10,6 +10,9 @@ import shutil
 import tkinter.messagebox as messagebox
 
 # ======================= 公共API接口 =======================
+def delimiter_conversion(path):
+    return _delimiter_conversion(path)
+
 def get_default_k_r_path():
     """
     获取Krita默认资源路径
@@ -214,6 +217,9 @@ _krita_local_appdata_path = [os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('L
                              os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritarc'),
                              os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'kritashortcutsrc'),
                              os.path.join(os.getenv('SYSTEMDRIVE'), os.getenv('LOCALAPPDATA'),'krita-sysinfo.log'), ]
+
+def _delimiter_conversion(path):
+    return path.replace('/', '\\')
 
 def _get_default_k_r_path():
     default_k_r_path = os.path.join(os.getenv('APPDATA'), 'krita')
