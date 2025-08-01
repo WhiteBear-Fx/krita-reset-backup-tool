@@ -817,13 +817,10 @@ class ToolBar(ttk.Frame):
                 .replace('{$PATH}', platform_dependence.get_config_path(config.name)[1])
                 .replace('{$CONFIPATH}', json_manage.settings_manager.get_setting('krita_resources_path')))
 
-        if json_manage.settings_manager.get_setting('del-dont-ask'):
+        def ok_callback():
             self._use(config)
-        else:
-            def ok_callback():
-                self._use(config)
 
-            self._create_ask_window(text, ok_callback)
+        self._create_ask_window(text, ok_callback)
 
     def _handle_path_match(self, config):
         """处理路径匹配的情况"""
