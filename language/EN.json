@@ -50,7 +50,7 @@
         "title-setting": "Settings",
         "error-krita-is-unk": "Unable to confirm if Krita is running. Attempting to apply configuration anyway.",
         "platform_unk": "The platform you are using is not yet supported.",
-        "path_disagreement": "This configuration group's directory settings differ from the current application settings. Are you sure you want to apply it?\n\nClicking OK will change the program's configuration location to:\n{$PATH}\n\nThe following directories will be deleted!\n{$PATH}\n{$CONFIPATH}\n\nYou can disable this warning in Settings.",
+        "path_disagreement": "This configuration group's directory settings differ from the current application settings. Are you sure you want to apply it?\n\nClicking OK will change the program's configuration location to:\n{$PATH}\n\nThe following directories will be deleted!\n{$PATH}\n{$CONFIPATH}",
         "input-name_disagreement": "The configuration group name '{$name}' conflicts with an existing group. Please rename it.",
         "error-platform-conflict": "Cannot import: The configuration group '{$name}' is from the '{#config-platform}' platform, which is different from your '{#platform}' platform. Conversion is not supported currently."
     }
